@@ -1,0 +1,8 @@
+wgpu-src/
+*.exe
+/bin/
+/dist/
+/_sandbox/
+.claude/
+/config.json
+loop.run.yaml

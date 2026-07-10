@@ -1,0 +1,32 @@
+# GPU-less CI. Be clear about what this does NOT cover: runners have no GPU,
+# so every test in internal/gpu self-skips and NO WGSL KERNEL IS EXERCISED
+# here. The software backend is not a substitute — its interpreter runs
+# invocations sequentially with no-op barriers, so cooperative kernels
+# miscompute by construction (see docs/backends.jsonl). Kernel correctness is
+# covered by scripts/verify.ps1 on a real GPU before a release.
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      # -short runs: the CPU oracle + refpow differential, miner state (incl.
+      # the FuzzSetJob seed corpus — Go runs fuzz seeds as plain tests), the
+      # share-submit tests, config, and the doc-vs-artifact linter that fails
+      # if README/DEPLOY/STRATEGY claim a backend docs/backends.jsonl does not
+      # back.
+      - name: Test (no GPU — internal/gpu self-skips)
+        run: go test -short ./...

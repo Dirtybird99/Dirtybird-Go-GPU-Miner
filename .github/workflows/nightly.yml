@@ -1,0 +1,36 @@
+# Nightly deep checks — CPU-only work that is too slow for per-push CI.
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  v114-gate:
+    # The million-hash differential gate: the fast v114 CPU suffix array must
+    # match the SAIS consensus reference on every hash. Pure CPU — runs fine
+    # without a GPU; far too slow for per-push.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Million-hash v114 vs SAIS gate
+        run: go test ./internal/astrobwt -run TestV114MillionHashGate -timeout 60m
+        env:
+          V114_GATE_HASHES: "1000000"
+
+  fuzz:
+    # Explore beyond the seed corpus on the untrusted-input surface (jobs
+    # arrive over a websocket with InsecureSkipVerify). New crashers land in
+    # testdata/fuzz/ — commit them as regression tests.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Fuzz SetJob
+        run: go test ./internal/miner -fuzz FuzzSetJob -fuzztime 5m

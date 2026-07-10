@@ -1,0 +1,11 @@
+{"name":"NVIDIA GeForce RTX 4070 Laptop GPU","backend":"Vulkan","subgroup":32,"path":"fused","result":"pass","ms":146,"measured_at":"2026-07-09"}
+{"name":"NVIDIA GeForce RTX 4070 Laptop GPU","backend":"Vulkan","subgroup":32,"path":"portable","result":"pass","ms":200,"measured_at":"2026-07-09"}
+{"name":"Intel(R) RaptorLake-S Mobile Graphics Controller","backend":"Vulkan","subgroup":32,"path":"fused","result":"pass","ms":210,"measured_at":"2026-07-09"}
+{"name":"Intel(R) RaptorLake-S Mobile Graphics Controller","backend":"Vulkan","subgroup":32,"path":"portable","result":"pass","ms":511,"measured_at":"2026-07-09"}
+{"name":"NVIDIA GeForce RTX 4070 Laptop GPU","backend":"DX12","subgroup":0,"path":"fused","result":"skip","error":"-sapath refine needs subgroup size \u003e= 32, device reports 0","ms":0,"measured_at":"2026-07-09"}
+{"name":"NVIDIA GeForce RTX 4070 Laptop GPU","backend":"DX12","subgroup":0,"path":"portable","result":"fail","error":"KAT dispatch: wgpu: failed to create pipeline layout: dx12: device already removed before CreateRootSignature: HRESULT 0x887A0001: DXGI_ERROR_INVALID_CALL","ms":19,"measured_at":"2026-07-09"}
+{"name":"Intel(R) RaptorLake-S Mobile Graphics Controller","backend":"GL","subgroup":0,"path":"fused","result":"skip","error":"-sapath refine needs subgroup size \u003e= 32, device reports 0","ms":0,"measured_at":"2026-07-09"}
+{"name":"Intel(R) RaptorLake-S Mobile Graphics Controller","backend":"GL","subgroup":0,"path":"portable","result":"fail","error":"KAT mismatch: pow(\"a\") = 04444265bf2e9fc44e6717736fa8f218c77a47e63890c5392fbc96ba04c3f08b, want 54e2324ddacc3f0383501a9e5760f85d63e9bc6705e9124ca7aef89016ab81ea","ms":3216,"measured_at":"2026-07-09"}
+{"name":"Software Renderer","backend":"Empty","subgroup":0,"path":"fused","result":"skip","error":"-sapath refine needs subgroup size \u003e= 32, device reports 0","ms":0,"measured_at":"2026-07-09"}
+{"name":"Software Renderer","backend":"Empty","subgroup":0,"path":"portable","result":"fail","error":"KAT mismatch: pow(\"a\") = 9841dbc794dc763057128dee189d5257e3350c8bb1c018f604084655ce995b35, want 54e2324ddacc3f0383501a9e5760f85d63e9bc6705e9124ca7aef89016ab81ea","ms":1775,"measured_at":"2026-07-09"}
+{"name":"NVIDIA GeForce RTX 4070 Laptop GPU","backend":"Vulkan","subgroup":32,"path":"spirv","result":"pass","ms":288,"measured_at":"2026-07-10"}

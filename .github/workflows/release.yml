@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (for example, v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: echo "value=${INPUT_TAG:-${GITHUB_REF#refs/tags/}}" >> "$GITHUB_OUTPUT"
+      - name: GPU-free source gate
+        run: |
+          go vet ./...
+          go test -short ./...
+      - name: Build release assets
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: bash scripts/release.sh "$VERSION"
+      - name: Verify release checksums
+        run: cd dist && sha256sum -c SHA256SUMS.txt
+      - name: Smoke-test packaged Linux binary
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          asset="dist/Dirtybird-Go-GPU-Miner-amd64-${VERSION}.tar.gz"
+          tar -xzf "$asset" -C /tmp
+          "/tmp/Dirtybird-Go-GPU-Miner-amd64-${VERSION}/go-gpu-miner" --help
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          notes=$(cat <<'NOTES'
+          ### Platform support
+
+          - Windows x64 with NVIDIA/Vulkan: locally validated.
+          - Linux x64, Linux arm64, and macOS arm64: build-only; not hardware validated.
+          - HiveOS/MMPOS: experimental.
+          NOTES
+          )
+          gh release create "$VERSION" \
+            --title "Dirtybird Go GPU Miner $VERSION" \
+            --notes "$notes" \
+            --generate-notes \
+            dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt
