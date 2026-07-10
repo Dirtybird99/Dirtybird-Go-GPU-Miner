@@ -16,10 +16,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.26.5"
       - name: Resolve version
@@ -28,6 +28,8 @@ jobs:
           INPUT_TAG: ${{ github.event.inputs.tag }}
         run: echo "value=${INPUT_TAG:-${GITHUB_REF#refs/tags/}}" >> "$GITHUB_OUTPUT"
       - name: GPU-free source gate
+        env:
+          GPU_TEST_SKIP: "1"
         run: |
           go vet ./...
           go test -short ./...

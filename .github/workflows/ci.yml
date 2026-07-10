@@ -1,5 +1,5 @@
 # GPU-less CI. Be clear about what this does NOT cover: runners have no GPU,
-# so every test in internal/gpu self-skips and NO WGSL KERNEL IS EXERCISED
+# so internal/gpu is explicitly skipped and NO GPU KERNEL IS EXERCISED
 # here. The software backend is not a substitute — its interpreter runs
 # invocations sequentially with no-op barriers, so cooperative kernels
 # miscompute by construction (see docs/backends.jsonl). Kernel correctness is
@@ -15,8 +15,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
       - name: Build
@@ -28,5 +28,7 @@ jobs:
       # share-submit tests, config, and the doc-vs-artifact linter that fails
       # if README/DEPLOY/STRATEGY claim a backend docs/backends.jsonl does not
       # back.
-      - name: Test (no GPU — internal/gpu self-skips)
+      - name: Test (no GPU — internal/gpu skipped)
+        env:
+          GPU_TEST_SKIP: "1"
         run: go test -short ./...

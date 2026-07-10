@@ -16,6 +16,13 @@ var (
 	sharedOnce sync.Once
 )
 
+func TestMain(m *testing.M) {
+	if os.Getenv("GPU_TEST_SKIP") == "1" {
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
+
 func testCtx(t *testing.T) *Ctx {
 	t.Helper()
 	sharedOnce.Do(func() {
