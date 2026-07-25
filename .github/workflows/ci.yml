@@ -19,6 +19,14 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
+      - name: Shell scripts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+            shellcheck --severity=error "$file"
+          done < <(git ls-files -z '*.sh')
       - name: Build
         run: go build ./...
       - name: Vet
