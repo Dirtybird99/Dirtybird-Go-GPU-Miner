@@ -1,0 +1,73 @@
+name: Benchmarks
+
+# Parity with the C and Zig miners.
+#
+# Be clear about what this measures: the CPU AstroBWTv3 core in internal/astrobwt,
+# which is the oracle the GPU path is verified against -- NOT the GPU pipeline.
+# Hosted runners have no GPU, and the software backend is an interpreter that
+# miscomputes cooperative kernels by construction (see ci.yml), so a GPU hashrate
+# number cannot be produced here at all. Real GPU figures come from
+# scripts/verify.ps1 on actual hardware.
+#
+# Runners are also shared and thermally throttled, so even this is a throughput
+# smoke test that catches an order-of-magnitude regression, not a headline number.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-benchmark:
+    name: Synthetic Benchmark (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-latest }
+          - { name: Windows, os: windows-latest }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      # GOAMD64=v3 is what the release binaries are built with, so benchmark the
+      # code that actually ships rather than the baseline fallback.
+      - name: Run the AstroBWTv3 CPU-core benchmarks
+        shell: bash
+        env:
+          GOAMD64: v3
+          GPU_TEST_SKIP: "1"
+        run: |
+          go test -mod=readonly -run '^$' -bench 'BenchmarkHash|BenchmarkSHA256' \
+            -benchtime=2s ./internal/astrobwt 2>&1 | tee "bench-${{ matrix.name }}.txt"
+          # `go test` reports a failed benchmark in its output but still exits 0 in
+          # some paths; require the terminal ok/PASS line so a broken bench is red.
+          grep -qE '^(ok|PASS)' "bench-${{ matrix.name }}.txt"
+
+      - name: Job summary
+        shell: bash
+        run: |
+          {
+            echo "### Synthetic benchmark (${{ matrix.name }})"
+            echo '```'
+            grep -E "^Benchmark" "bench-${{ matrix.name }}.txt" || cat "bench-${{ matrix.name }}.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.name }}
+          path: bench-${{ matrix.name }}.txt
