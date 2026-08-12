@@ -27,6 +27,8 @@ jobs:
             bash -n "$file"
             shellcheck --severity=error "$file"
           done < <(git ls-files -z '*.sh')
+      - name: HiveOS stats parser
+        run: bash config/test-h-stats.sh
       - name: Build
         run: go build ./...
       - name: Vet
