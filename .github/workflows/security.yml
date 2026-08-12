@@ -1,0 +1,113 @@
+name: Security
+
+# Brings this repo to parity with the C and Zig miners, which have carried these
+# checks for a while. CodeQL is included here and not in the Zig sibling for the
+# plain reason that CodeQL supports Go and does not support Zig.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Gitleaks walks history, not just the tip: a key that was committed and
+          # later removed is still a leaked key.
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
+          queries: security-and-quality
+      # autobuild is enough here: a plain `go build ./...` covers the module, and
+      # the hand-written amd64/arm64 assembly is not something CodeQL models either
+      # way.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only meaningful on a pull request -- it diffs the PR's manifests against the
+    # base. It reports as "Skipped" on push builds, which is expected.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical
+
+  check-binaries:
+    name: Check for Binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Fail if binary artifacts are tracked
+        run: |
+          # A miner is exactly the kind of project people are right to be wary of
+          # downloading, so the repo should contain no opaque prebuilt executables.
+          #
+          # The compiled shaders under internal/gpu/spirv/*.spv ARE binaries, and
+          # are deliberately tracked: the miner loads them at runtime and the repo
+          # ships compile.ps1 plus the GLSL they come from, so they are
+          # reproducible rather than opaque. They are intentionally outside the
+          # pattern below -- which targets host executables and archives, the
+          # things that could ship arbitrary code to someone running a miner.
+          bad=$(git ls-files \
+            | grep -iE '\.(exe|dll|so|dylib|a|obj|pdb|lib|zip|tar|gz|xz|bz2|7z|profdata|profraw)$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Binary/artifact files are tracked in the repo:"; echo "$bad"; exit 1
+          fi
+          echo "OK: no tracked binary artifacts."
+      - name: Warn on large files
+        run: |
+          large=$(git ls-files | while read -r f; do
+            [ -f "$f" ] || continue
+            s=$(stat -c%s "$f")
+            [ "$s" -gt 10485760 ] && echo "$f ($((s / 1048576))MB)"
+          done)
+          if [ -n "$large" ]; then
+            echo "::warning::Files larger than 10MB are tracked:"; echo "$large"
+          else
+            echo "OK: nothing tracked over 10MB."
+          fi
