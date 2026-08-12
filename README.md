@@ -62,6 +62,27 @@ GitHub releases use the same platform layout as the other Dirtybird miners:
 Verify every download against `SHA256SUMS.txt`, then run `--selftest` on the
 target machine before mining.
 
+### HiveOS / MMPOS
+
+Experimental — no rig has run this miner. Create a flight sheet with miner
+`Custom`:
+
+| Field | Value |
+|---|---|
+| Miner name | `dirtybird-go-gpu-miner` |
+| Installation URL | the `hiveos_mmpos.amd64.tar.gz` asset URL from the latest release |
+| Hash algorithm | `astrobwt` |
+| Wallet and worker template | `%WAL%.%WORKER_NAME%` |
+
+The miner name must match exactly: it is `CUSTOM_NAME` in
+`config/h-manifest.conf` and the top-level directory inside the archive, and
+HiveOS looks the package up by that name. Anything else fails to install.
+
+There is no stats API, so `h-stats.sh` scrapes hashrate and accepted/rejected
+counts from the status line in the log; `config/test-h-stats.sh` pins that
+parser and runs in CI. The reported uptime is the rig's, not the miner's — the
+status line carries no elapsed field.
+
 ## Build
 
 Go 1.25+:
